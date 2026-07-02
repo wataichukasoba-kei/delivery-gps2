@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>Delivery GPS</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+html,body{
+    margin:0;
+    height:100%;
+}
+
+#map{
+    height:100vh;
+}
+
+.controls{
+    position:absolute;
+    top:10px;
+    left:10px;
+    z-index:1000;
+}
+
+button{
+    padding:10px 20px;
+    font-size:16px;
+    margin-right:5px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="controls">
+    <button onclick="startTracking()">開始</button>
+    <button onclick="stopTracking()">停止</button>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+const map = L.map("map").setView([35.767, 139.847], 13);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap"
+}).addTo(map);
+
+let watchId = null;
+let tracking = false;
+
+let currentMarker = null;
+let path = [];
+
+const polyline = L.polyline([], {
+    color: "blue",
+    weight: 5
+}).addTo(map);
+
+// 最初に現在地表示
+navigator.geolocation.getCurrentPosition(showCurrentLocation);
+
+// 現在地表示
+function showCurrentLocation(position){
+
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
+
+    map.setView([lat,lng],17);
+
+    if(currentMarker){
+        currentMarker.setLatLng([lat,lng]);
+    }else{
+        currentMarker = L.marker([lat,lng]).addTo(map);
+    }
+
+}
+
+// 開始
+function startTracking(){
+
+    if(tracking) return;
+
+    tracking = true;
+
+    path = [];
+    polyline.setLatLngs([]);
+
+    watchId = navigator.geolocation.watchPosition(position=>{
+
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        if(currentMarker){
+            currentMarker.setLatLng([lat,lng]);
+        }
+
+        map.panTo([lat,lng]);
+
+        path.push([lat,lng]);
+
+        polyline.setLatLngs(path);
+
+        console.log(path);
+
+    },
+    error=>{
+        alert("GPS取得失敗");
+    },
+    {
+        enableHighAccuracy:true,
+        maximumAge:0
+    });
+
+}
+
+// 停止
+function stopTracking(){
+
+    if(!tracking) return;
+
+    navigator.geolocation.clearWatch(watchId);
+
+    tracking=false;
+
+    alert("記録終了");
+
+}
+</script>
+
+</body>
+</html>
