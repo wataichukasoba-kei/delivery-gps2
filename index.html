@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Delivery GPS</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
@@ -17,16 +18,45 @@ html,body{
 }
 
 .controls{
-    position:absolute;
-    top:10px;
-    left:10px;
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
     z-index:1000;
+    display:flex;
+    gap:15px;
 }
 
 button{
-    padding:10px 20px;
-    font-size:16px;
-    margin-right:5px;
+    width:140px;
+    height:55px;
+    font-size:20px;
+    font-weight:bold;
+    border:none;
+    border-radius:15px;
+    color:white;
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
+}
+
+#startBtn{
+    background:#28a745;
+}
+
+#stopBtn{
+    background:#dc3545;
+}
+
+.status{
+    position:fixed;
+    top:15px;
+    left:50%;
+    transform:translateX(-50%);
+    background:white;
+    padding:10px 18px;
+    border-radius:12px;
+    font-weight:bold;
+    z-index:1000;
+    box-shadow:0 3px 10px rgba(0,0,0,.3);
 }
 </style>
 
@@ -34,70 +64,74 @@ button{
 
 <body>
 
-<div class="controls">
-    <button onclick="startTracking()">開始</button>
-    <button onclick="stopTracking()">停止</button>
+<div class="status" id="status">
+🔴 停止中
 </div>
 
 <div id="map"></div>
+
+<div class="controls">
+<button id="startBtn" onclick="startTracking()">🟢 開始</button>
+<button id="stopBtn" onclick="stopTracking()">🔴 停止</button>
+</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
 
-const map = L.map("map").setView([35.767, 139.847], 13);
+const map = L.map("map").setView([35.767,139.847],13);
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap"
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    attribution:"© OpenStreetMap"
 }).addTo(map);
 
-let watchId = null;
-let tracking = false;
+let currentMarker=null;
+let watchId=null;
+let tracking=false;
+let path=[];
 
-let currentMarker = null;
-let path = [];
-
-const polyline = L.polyline([], {
-    color: "blue",
-    weight: 5
+const polyline=L.polyline([],{
+    color:"blue",
+    weight:5
 }).addTo(map);
 
-// 最初に現在地表示
 navigator.geolocation.getCurrentPosition(showCurrentLocation);
 
-// 現在地表示
 function showCurrentLocation(position){
 
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
+    const lat=position.coords.latitude;
+    const lng=position.coords.longitude;
 
     map.setView([lat,lng],17);
 
     if(currentMarker){
         currentMarker.setLatLng([lat,lng]);
     }else{
-        currentMarker = L.marker([lat,lng]).addTo(map);
+        currentMarker=L.marker([lat,lng]).addTo(map);
     }
 
 }
 
-// 開始
 function startTracking(){
 
-    if(tracking) return;
+    if(tracking)return;
 
-    tracking = true;
+    tracking=true;
 
-    path = [];
+    document.getElementById("status").innerHTML="🟢 GPS記録中";
+
+    path=[];
     polyline.setLatLngs([]);
 
-    watchId = navigator.geolocation.watchPosition(position=>{
+    watchId=navigator.geolocation.watchPosition(position=>{
 
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
+        const lat=position.coords.latitude;
+        const lng=position.coords.longitude;
 
         if(currentMarker){
             currentMarker.setLatLng([lat,lng]);
+        }else{
+            currentMarker=L.marker([lat,lng]).addTo(map);
         }
 
         map.panTo([lat,lng]);
@@ -106,10 +140,8 @@ function startTracking(){
 
         polyline.setLatLngs(path);
 
-        console.log(path);
-
     },
-    error=>{
+    ()=>{
         alert("GPS取得失敗");
     },
     {
@@ -119,18 +151,20 @@ function startTracking(){
 
 }
 
-// 停止
 function stopTracking(){
 
-    if(!tracking) return;
+    if(!tracking)return;
 
     navigator.geolocation.clearWatch(watchId);
 
     tracking=false;
 
+    document.getElementById("status").innerHTML="🔴 停止中";
+
     alert("記録終了");
 
 }
+
 </script>
 
 </body>
