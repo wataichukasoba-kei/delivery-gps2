@@ -85,12 +85,13 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
     attribution:"© OpenStreetMap"
 }).addTo(map);
 
-let currentMarker=null;
-let watchId=null;
-let tracking=false;
-let path=[];
+let currentMarker = null;
+let watchId = null;
+let tracking = false;
+let path = [];
+let gpsLog = [];
 
-const polyline=L.polyline([],{
+const polyline = L.polyline([],{
     color:"blue",
     weight:5
 }).addTo(map);
@@ -99,46 +100,59 @@ navigator.geolocation.getCurrentPosition(showCurrentLocation);
 
 function showCurrentLocation(position){
 
-    const lat=position.coords.latitude;
-    const lng=position.coords.longitude;
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
 
     map.setView([lat,lng],17);
 
     if(currentMarker){
         currentMarker.setLatLng([lat,lng]);
     }else{
-        currentMarker=L.marker([lat,lng]).addTo(map);
+        currentMarker = L.marker([lat,lng]).addTo(map);
     }
 
 }
 
 function startTracking(){
 
-    if(tracking)return;
+    if(tracking) return;
 
-    tracking=true;
+    tracking = true;
 
-    document.getElementById("status").innerHTML="🟢 GPS記録中";
+    document.getElementById("status").innerHTML = "🟢 GPS記録中";
 
-    path=[];
+    path = [];
+    gpsLog = [];
+
     polyline.setLatLngs([]);
 
-    watchId=navigator.geolocation.watchPosition(position=>{
+    watchId = navigator.geolocation.watchPosition(position=>{
 
-        const lat=position.coords.latitude;
-        const lng=position.coords.longitude;
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
 
         if(currentMarker){
             currentMarker.setLatLng([lat,lng]);
         }else{
-            currentMarker=L.marker([lat,lng]).addTo(map);
+            currentMarker = L.marker([lat,lng]).addTo(map);
         }
 
         map.panTo([lat,lng]);
 
         path.push([lat,lng]);
 
+        gpsLog.push({
+            time:new Date().toISOString(),
+            lat:lat,
+            lng:lng,
+            speed:position.coords.speed,
+            accuracy:position.coords.accuracy
+        });
+
         polyline.setLatLngs(path);
+
+        document.getElementById("status").innerHTML =
+        `🟢 GPS記録中 (${gpsLog.length}件)`;
 
     },
     ()=>{
@@ -153,15 +167,17 @@ function startTracking(){
 
 function stopTracking(){
 
-    if(!tracking)return;
+    if(!tracking) return;
 
     navigator.geolocation.clearWatch(watchId);
 
-    tracking=false;
+    tracking = false;
 
     document.getElementById("status").innerHTML="🔴 停止中";
 
-    alert("記録終了");
+    console.log(gpsLog);
+
+    alert(`記録終了\n${gpsLog.length}件保存しました`);
 
 }
 
